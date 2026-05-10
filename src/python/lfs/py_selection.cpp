@@ -685,10 +685,9 @@ namespace lfs::python {
                 if (auto* rm = get_rm())
                     rm->markDirty(vis::DirtyFlag::SELECTION);
             },
-            nb::arg("gaussian_index"), nb::arg("threshold") = 0.2f,
-            "Select gaussians by color similarity to a reference gaussian.\n"
-            "Picks the SH DC color of the gaussian at the given index and selects all\n"
-            "gaussians whose per-channel color difference is within the threshold (0-1).");
+            nb::arg("gaussian_index"), nb::arg("threshold") = 0.2f, "Select gaussians by color similarity to a reference gaussian.\n"
+                                                                    "Picks the SH DC color of the gaussian at the given index and selects all\n"
+                                                                    "gaussians whose per-channel color difference is within the threshold (0-1).");
 
         // ─────────────────────────────────────────────────────────────────────
         // FLASH & FEEDBACK
