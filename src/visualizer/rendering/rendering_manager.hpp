@@ -42,7 +42,7 @@
 namespace lfs::core {
     class SplatData;
     class Tensor;
-}
+} // namespace lfs::core
 
 namespace lfs::core::events::ui {
     struct GridSettingsChanged;
