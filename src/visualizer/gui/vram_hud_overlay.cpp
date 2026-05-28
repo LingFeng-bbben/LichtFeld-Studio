@@ -767,7 +767,10 @@ namespace lfs::vis::gui {
             add_synthetic_row("cuda.context.residual", residual);
         }
         if (proc.cuda_warmup_bytes > 0) {
-            add_synthetic_row("cuda.warmup_kernels", proc.cuda_warmup_bytes);
+            // Device-memory delta the kernel warmup committed (cubin upload). Named
+            // cuda.modules so it sits next to cuda.runtime — if this stays small,
+            // module code is not what fills the runtime residual.
+            add_synthetic_row("cuda.modules", proc.cuda_warmup_bytes);
         }
         if (proc.vulkan_vma_block_bytes > 0) {
             // Residual against the memory VMA actually owns (blockBytes), NOT the
@@ -812,12 +815,14 @@ namespace lfs::vis::gui {
         const bool cuda_runtime_active =
             proc.cuda_context_baseline > 0 || proc.cuda_pool_valid || proc.cuda_warmup_bytes > 0;
         if (cuda_runtime_active && process_used > tracked_total) {
-            // This is measured only by subtraction from the per-PID process total. In
-            // practice it is usually CUDA module/JIT/runtime or third-party library
-            // backing memory, but no API tells us the exact owner, so keep the HUD
-            // label explicit instead of pretending it is a proven CUDA phase.
+            // Per-PID memory left after positively tracking every other source:
+            // tensors, the whole CUDA pool (live + cache + overhead + waste), and
+            // Vulkan (VMA + external buffers + swap-chain). What remains is the CUDA
+            // driver's own runtime: per-stream/launch scratch, async-pool metadata,
+            // graph buffers, plus lazily-loaded module cubins. No API attributes it
+            // further, but it is now a named floor rather than an opaque residual.
             const std::size_t residual = process_used - tracked_total;
-            add_synthetic_row("process.residual", residual, true);
+            add_synthetic_row("cuda.runtime", residual, true);
         }
 
         std::sort(entries.begin(), entries.end(),

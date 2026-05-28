@@ -1298,7 +1298,16 @@ namespace lfs::vis {
             hasOverlayTensor(request.overlay.emphasis.transient_mask.mask, num_splats);
         const bool transform_indices_enabled = hasTransformIndices(request.scene.transform_indices, num_splats);
 
-        const std::size_t mask_region_bytes = alignUp(std::max<std::size_t>(num_splats, 1), 4);
+        // Only reserve the per-gaussian mask regions when their feature is active.
+        // The compose shader reads selection_mask/preview_mask solely under the
+        // matching selection flag (alphablend_shader.slang), and the C++ upload is
+        // likewise gated below — so when nothing is selected these collapse to a few
+        // bytes instead of num_splats × ring-slots (~30 MiB at 5M splats).
+        const std::size_t full_mask_bytes = alignUp(std::max<std::size_t>(num_splats, 1), 4);
+        const std::size_t selection_mask_region_bytes =
+            selection_enabled ? full_mask_bytes : sizeof(std::uint32_t);
+        const std::size_t preview_mask_region_bytes =
+            preview_enabled ? full_mask_bytes : sizeof(std::uint32_t);
         const std::size_t color_region_bytes =
             lfs::rendering::kSelectionColorTableCount * 4 * sizeof(float);
         const std::size_t transform_region_bytes =
@@ -1312,8 +1321,8 @@ namespace lfs::vis {
         const std::size_t model_transforms_region_bytes =
             modelTransformCount(request.scene.model_transforms) * 16 * sizeof(float);
         std::array<std::size_t, kOverlayRegionCount> region_bytes{};
-        region_bytes[OverlaySelectionMask] = mask_region_bytes;
-        region_bytes[OverlayPreviewMask] = mask_region_bytes;
+        region_bytes[OverlaySelectionMask] = selection_mask_region_bytes;
+        region_bytes[OverlayPreviewMask] = preview_mask_region_bytes;
         region_bytes[OverlaySelectionColors] = color_region_bytes;
         region_bytes[OverlayTransformIndices] = transform_region_bytes;
         region_bytes[OverlayNodeMask] = node_mask_region_bytes;
@@ -1848,7 +1857,18 @@ namespace lfs::vis {
         // Soft deletes only need opacity rewritten; all geometry/color tensors can
         // still be borrowed from Vulkan-external model storage. Keep that path
         // narrow so a delete mask costs N floats instead of a full raw-model copy.
-        const bool has_deleted_mask = splat_data.has_deleted_mask();
+        //
+        // Gate on an ACTUAL nonzero delete count, not has_deleted_mask() which only
+        // tests tensor existence. Strategies like MRNF keep a deleted-mask tensor
+        // resident even when nothing is deleted (capacity == live), so testing
+        // existence alone holds a num_splats float opacity copy (× ring slots) for
+        // nothing. When the count is zero we borrow the model opacity directly and
+        // the slot is released below; a prune that creates real deletes flips this
+        // back on and restores the copy-and-zero path. count_nonzero syncs, but it
+        // is a single num_splats reduction — negligible beside projecting/sorting
+        // every gaussian this frame.
+        const bool has_deleted_mask =
+            splat_data.has_deleted_mask() && splat_data.deleted().count_nonzero() > 0;
         const bool base_inputs_external =
             means_storage && sh0_storage && rotations_storage && scaling_storage;
         const bool can_bind_external =
