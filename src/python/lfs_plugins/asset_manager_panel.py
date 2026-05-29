@@ -775,23 +775,30 @@ class AssetManagerPanel(Panel):
             elif self._selection_type == "project" and not self._selected_project_id:
                 self._selection_type = "none"
 
+    @staticmethod
+    def _asset_file_exists(asset: Dict[str, Any]) -> bool:
+        """Single source of truth for asset presence, shared by the list and
+        every count surface so sidebar badges never disagree with what renders."""
+        file_path = asset.get("absolute_path") or asset.get("path")
+        return bool(file_path) and os.path.exists(file_path)
+
     def _scene_asset_count(self, scene_id: str) -> int:
         if not self._asset_index or not hasattr(self._asset_index, "assets"):
             return 0
         return sum(
             1
             for asset in self._asset_index.assets.values()
-            if asset.get("scene_id") == scene_id
+            if asset.get("scene_id") == scene_id and self._asset_file_exists(asset)
         )
 
     def _project_asset_count(self, project_id: str) -> int:
-        """Count total assets in a project."""
+        """Count assets in a project whose backing file is present on disk."""
         if not self._asset_index or not hasattr(self._asset_index, "assets"):
             return 0
         return sum(
             1
             for asset in self._asset_index.assets.values()
-            if asset.get("project_id") == project_id
+            if asset.get("project_id") == project_id and self._asset_file_exists(asset)
         )
 
     def _ensure_default_project(self) -> None:
@@ -910,8 +917,7 @@ class AssetManagerPanel(Panel):
 
         assets = []
         for asset_id, asset in self._asset_index.assets.items():
-            file_path = asset.get("absolute_path") or asset.get("path")
-            if not file_path or not os.path.exists(file_path):
+            if not self._asset_file_exists(asset):
                 modified_at = asset.get("modified_at", "")
                 try:
                     ts = datetime.fromisoformat(modified_at.replace("Z", "+00:00")).replace(tzinfo=None)
@@ -1191,7 +1197,11 @@ class AssetManagerPanel(Panel):
         if not self._asset_index or not hasattr(self._asset_index, "assets"):
             return self._get_default_filters()
 
-        assets = list(self._asset_index.assets.values())
+        assets = [
+            a
+            for a in self._asset_index.assets.values()
+            if self._asset_file_exists(a)
+        ]
 
         # Count by filter (Splat, PCL, Dataset, Checkpoint)
         # Splat: 3DGS PLY files (ply_3dgs), SOG files, and legacy PLY
@@ -1562,7 +1572,7 @@ class AssetManagerPanel(Panel):
         return sum(
             1
             for asset in self._asset_index.assets.values()
-            if asset.get("scene_id") == scene_id
+            if asset.get("scene_id") == scene_id and self._asset_file_exists(asset)
         )
 
     def get_selected_scene_created(self) -> str:

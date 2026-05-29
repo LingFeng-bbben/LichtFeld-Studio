@@ -664,3 +664,12 @@ def test_watch_dirs_dialog_unmount_cancels_and_joins_scan_thread(import_dialog_m
     assert scan_thread.join_calls == [module.THREAD_JOIN_TIMEOUT_SEC]
     assert panel._scan_thread is None
     assert document.removed_models == ["watch_dirs_dialog"]
+
+
+def test_asset_catalog_storage_is_isolated_from_real_home(isolate_asset_manager_catalog):
+    from lfs_plugins.asset_index import resolve_asset_manager_storage_path
+
+    resolved = resolve_asset_manager_storage_path()
+
+    assert resolved == isolate_asset_manager_catalog
+    assert ".lichtfeld" not in resolved.parts

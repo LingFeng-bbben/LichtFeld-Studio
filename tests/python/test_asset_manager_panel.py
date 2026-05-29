@@ -904,3 +904,37 @@ def test_gallery_precise_scroll_moves_scroll_container(asset_manager_panel_modul
 
     assert gallery_scroll.scroll_top == 152.0
     assert event.stopped is True
+
+
+def test_project_count_matches_visible_list(asset_manager_panel_module, tmp_path):
+    present_file = tmp_path / "present.ply"
+    present_file.write_bytes(b"ply")
+
+    def _asset(asset_id, path):
+        asset = dict(_make_asset())
+        asset["id"] = asset_id
+        asset["absolute_path"] = str(path)
+        asset["path"] = str(path)
+        asset["project_id"] = "p1"
+        asset["scene_id"] = "s1"
+        return asset
+
+    panel = asset_manager_panel_module.AssetManagerPanel()
+    panel._handle = _HandleStub()
+    panel._asset_index = SimpleNamespace(
+        assets={
+            "present": _asset("present", present_file),
+            "missing": _asset("missing", tmp_path / "deleted.ply"),
+        },
+        projects={"p1": {"id": "p1", "name": "Default", "scene_ids": ["s1"]}},
+        scenes={"s1": {"id": "s1", "name": "scene", "project_id": "p1"}},
+        tags={},
+        collections={},
+    )
+
+    visible = panel.get_filtered_assets()
+
+    assert len(panel._asset_index.assets) == 2
+    assert [asset["id"] for asset in visible] == ["present"]
+    assert panel._project_asset_count("p1") == len(visible)
+    assert panel._scene_asset_count("s1") == 1
