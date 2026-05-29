@@ -514,6 +514,10 @@ namespace lfs::vis::gui {
                 return false; // fall back to a live draw so the panel reflects the change
             }
         }
+
+        if (shouldSyncPanel(nullptr))
+            return false;
+
         return host_.drawDirectCached(x, y, w, h);
     }
 
