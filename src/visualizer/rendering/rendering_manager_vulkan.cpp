@@ -1321,7 +1321,20 @@ namespace lfs::vis {
                 metadata.flip_y = render_result->flip_y;
                 viewport_artifact_service_.clearViewportOutput();
                 viewport_artifact_service_.setLazyCapture(
-                    []() -> std::shared_ptr<lfs::core::Tensor> { return {}; },
+                    [this]() -> std::shared_ptr<lfs::core::Tensor> {
+                        if (!point_cloud_vulkan_renderer_ || !last_vulkan_context_) {
+                            return {};
+                        }
+                        auto image = point_cloud_vulkan_renderer_->readOutputImage(
+                            *last_vulkan_context_,
+                            PointCloudVulkanRenderer::OutputSlot::Main);
+                        if (!image) {
+                            LOG_ERROR("Failed to capture point-cloud Vulkan viewport image: {}",
+                                      image.error());
+                            return {};
+                        }
+                        return std::move(*image);
+                    },
                     metadata,
                     render_result->size);
 

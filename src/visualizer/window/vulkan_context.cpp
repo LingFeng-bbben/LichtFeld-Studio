@@ -1593,6 +1593,16 @@ namespace lfs::vis {
         if (result != VK_SUCCESS) {
             return fail(std::format("External Vulkan image format is unsupported: {}", vkResultToString(result)));
         }
+        const VkExtent3D max_extent = format_properties.imageFormatProperties.maxExtent;
+        if (extent.width > max_extent.width || extent.height > max_extent.height) {
+            return fail(std::format(
+                "External Vulkan image {}x{} exceeds device-supported limit {}x{} for format {}",
+                extent.width,
+                extent.height,
+                max_extent.width,
+                max_extent.height,
+                static_cast<int>(format)));
+        }
         if ((external_format_properties.externalMemoryProperties.externalMemoryFeatures &
              VK_EXTERNAL_MEMORY_FEATURE_EXPORTABLE_BIT) == 0) {
             return fail("External Vulkan image format is not exportable");

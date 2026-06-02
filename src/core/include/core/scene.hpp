@@ -226,6 +226,7 @@ namespace lfs::core {
         struct RenderableCropBox {
             NodeId node_id = NULL_NODE;
             NodeId parent_splat_id = NULL_NODE;
+            int parent_node_index = -1;
             const CropBoxData* data = nullptr;
             glm::mat4 world_transform{1.0f};
             glm::mat4 local_transform{1.0f};
@@ -241,6 +242,7 @@ namespace lfs::core {
         struct RenderableEllipsoid {
             NodeId node_id = NULL_NODE;
             NodeId parent_splat_id = NULL_NODE;
+            int parent_node_index = -1;
             const EllipsoidData* data = nullptr;
             glm::mat4 world_transform{1.0f};
             glm::mat4 local_transform{1.0f};

@@ -117,6 +117,15 @@ namespace lfs::vis {
         [[nodiscard]] std::expected<std::shared_ptr<lfs::core::Tensor>, std::string> readOutputImage(
             VulkanContext& context,
             OutputSlot output_slot = OutputSlot::Main) const;
+        [[nodiscard]] std::expected<std::shared_ptr<lfs::core::Tensor>, std::string> readOutputImageRgb8(
+            VulkanContext& context,
+            OutputSlot output_slot = OutputSlot::Main) const;
+        [[nodiscard]] std::expected<void, std::string> readOutputImageIntoCpuHwc(
+            VulkanContext& context,
+            OutputSlot output_slot,
+            lfs::core::Tensor& destination,
+            int destination_x,
+            int destination_y) const;
         [[nodiscard]] std::expected<float, std::string> sampleDepthAtPixel(
             VulkanContext& context,
             int x,
@@ -294,6 +303,7 @@ namespace lfs::vis {
         // readOutputImage / sampleDepthAtPixel instead of allocating a fresh pool/fence
         // per call. Torn down in reset() while the device is still valid.
         [[nodiscard]] std::expected<void, std::string> ensureReadbackContext() const;
+        [[nodiscard]] std::expected<glm::ivec2, std::string> latestOutputImageSize(OutputSlot output_slot) const;
 
         VulkanContext* context_ = nullptr;
         bool initialized_ = false;

@@ -127,12 +127,23 @@ namespace lfs::vis {
                                                               const glm::vec3& camera_position,
                                                               float focal_length_mm,
                                                               int width, int height);
+        std::shared_ptr<lfs::core::Tensor> renderPreviewImageRgb8(SceneManager* scene_manager,
+                                                                  const glm::mat3& camera_rotation,
+                                                                  const glm::vec3& camera_position,
+                                                                  float focal_length_mm,
+                                                                  int width, int height);
         std::shared_ptr<lfs::core::Tensor> renderPreviewImage(const lfs::core::SplatData& model,
                                                               SceneRenderState scene_state,
                                                               const glm::mat3& camera_rotation,
                                                               const glm::vec3& camera_position,
                                                               float focal_length_mm,
                                                               int width, int height);
+        std::shared_ptr<lfs::core::Tensor> renderPreviewImageRgb8(const lfs::core::SplatData& model,
+                                                                  SceneRenderState scene_state,
+                                                                  const glm::mat3& camera_rotation,
+                                                                  const glm::vec3& camera_position,
+                                                                  float focal_length_mm,
+                                                                  int width, int height);
 
         void markDirty();
         void markDirty(DirtyMask flags);
@@ -445,6 +456,41 @@ namespace lfs::vis {
         bool consumeResizeCompleted() { return frame_lifecycle_service_.consumeResizeCompleted(); }
 
     private:
+        std::shared_ptr<lfs::core::Tensor> renderPreviewImageWithState(
+            SceneManager* scene_manager,
+            const lfs::core::SplatData& model,
+            SceneRenderState scene_state,
+            const glm::mat3& camera_rotation,
+            const glm::vec3& camera_position,
+            float focal_length_mm,
+            int width,
+            int height,
+            bool render_lock_held,
+            std::optional<lfs::rendering::CameraIntrinsics> intrinsics_override,
+            lfs::core::DataType output_dtype);
+        [[nodiscard]] std::expected<void, std::string> renderPreviewImageToPreviewSlotWithState(
+            SceneManager* scene_manager,
+            const lfs::core::SplatData& model,
+            SceneRenderState scene_state,
+            const glm::mat3& camera_rotation,
+            const glm::vec3& camera_position,
+            float focal_length_mm,
+            int width,
+            int height,
+            bool render_lock_held,
+            std::optional<lfs::rendering::CameraIntrinsics> intrinsics_override);
+        std::shared_ptr<lfs::core::Tensor> renderPreviewImageTiledWithState(
+            SceneManager* scene_manager,
+            const lfs::core::SplatData& model,
+            SceneRenderState scene_state,
+            const glm::mat3& camera_rotation,
+            const glm::vec3& camera_position,
+            float focal_length_mm,
+            int width,
+            int height,
+            bool render_lock_held,
+            lfs::core::DataType output_dtype);
+
         struct CameraMetricsJobRequest {
             uint64_t generation = 0;
             TrainerManager* trainer_manager = nullptr;

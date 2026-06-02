@@ -2607,6 +2607,7 @@ namespace lfs::core {
             RenderableCropBox rcb;
             rcb.node_id = node->id;
             rcb.parent_splat_id = node->parent_id;
+            rcb.parent_node_index = getVisibleNodeIndex(node->parent_id);
             rcb.data = node->cropbox.get();
             rcb.world_transform = getWorldTransform(node->id);
             rcb.local_transform = node->local_transform.get();
@@ -2691,6 +2692,7 @@ namespace lfs::core {
             RenderableEllipsoid rel;
             rel.node_id = node->id;
             rel.parent_splat_id = node->parent_id;
+            rel.parent_node_index = getVisibleNodeIndex(node->parent_id);
             rel.data = node->ellipsoid.get();
             rel.world_transform = getWorldTransform(node->id);
             rel.local_transform = node->local_transform.get();
