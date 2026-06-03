@@ -246,6 +246,7 @@ namespace lfs::training {
                 const int max_sh = model.get_max_sh_degree();
                 const int active_sh = model.get_active_sh_degree();
                 const float scene_scale = model.get_scene_scale();
+                auto frozen_ranges = model.frozen_ranges();
                 lfs::core::Tensor deleted = model.has_deleted_mask() ? model.deleted() : lfs::core::Tensor{};
                 lfs::core::Tensor densification_info = model._densification_info;
 
@@ -303,6 +304,7 @@ namespace lfs::training {
                 if (densification_info.is_valid()) {
                     migrated._densification_info = std::move(densification_info);
                 }
+                migrated.set_frozen_ranges(std::move(frozen_ranges));
                 model = std::move(migrated);
                 model.set_tensor_allocator(tensor_allocator);
                 lfs::core::Tensor::trim_memory_pool();
