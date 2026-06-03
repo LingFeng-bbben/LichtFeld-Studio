@@ -424,7 +424,7 @@ namespace lfs::core {
             constexpr size_t BYTES_PER_GAUSSIAN = 3 * 4 + 1 * 3 * 4 + 3 * 4 + 4 * 4 + 1 * 4;
             const size_t saved_mb = getTotalGaussianCount() * BYTES_PER_GAUSSIAN / (1024 * 1024);
             LOG_INFO("Consolidated {} nodes, saved ~{} MB VRAM", consolidated, saved_mb);
-            notifyMutation(MutationType::MODEL_CHANGED);
+            notifyMutation(MutationType::VISIBILITY_CHANGED);
         }
 
         return consolidated;
@@ -439,7 +439,7 @@ namespace lfs::core {
         mask.reserve(consolidated_node_ids_.size());
         for (const NodeId id : consolidated_node_ids_) {
             if (const auto* node = getNodeById(id)) {
-                mask.push_back(node->visible.get());
+                mask.push_back(isNodeEffectivelyVisible(node->id));
             } else {
                 mask.push_back(true);
             }
@@ -859,6 +859,15 @@ namespace lfs::core {
             return;
 
         cached_transforms_.clear();
+        if (consolidated_ && !consolidated_node_ids_.empty()) {
+            cached_transforms_.reserve(consolidated_node_ids_.size());
+            for (const NodeId id : consolidated_node_ids_) {
+                cached_transforms_.push_back(getWorldTransform(id));
+            }
+            transform_cache_valid_.store(true, std::memory_order_release);
+            return;
+        }
+
         for (const auto& node : nodes_) {
             if (node->model && isNodeEffectivelyVisible(node->id)) {
                 cached_transforms_.push_back(getWorldTransform(node->id));
@@ -921,6 +930,7 @@ namespace lfs::core {
     int Scene::getVisibleNodeIndex(const NodeId node_id) const {
         if (node_id == NULL_NODE)
             return -1;
+
         int index = 0;
         for (const auto& node : nodes_) {
             if (!node->visible || !node->model)

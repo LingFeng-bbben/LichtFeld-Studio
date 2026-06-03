@@ -2522,10 +2522,15 @@ namespace lfs::vis {
                 transform = rendering::dataWorldTransformToVisualizerWorld(transform);
             }
             state.transform_indices = scene_.getTransformIndices();
-            state.visible_splat_count = state.model_transforms.size();
 
             // Get node visibility mask (for consolidated models)
             state.node_visibility_mask = scene_.getNodeVisibilityMask();
+            state.visible_splat_count = state.node_visibility_mask.empty()
+                                            ? state.model_transforms.size()
+                                            : static_cast<size_t>(std::count(
+                                                  state.node_visibility_mask.begin(),
+                                                  state.node_visibility_mask.end(),
+                                                  true));
         }
         state.camera_scene_transforms = scene_.getVisibleCameraSceneTransforms();
         for (auto& transform : state.camera_scene_transforms) {
