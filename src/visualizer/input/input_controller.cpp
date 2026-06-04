@@ -401,6 +401,12 @@ namespace lfs::vis {
         bindings_.setOnBindingsChanged([this]() { refreshMovementKeyCache(); });
     }
 
+    void InputController::applySplitterCursorOverride() const {
+        if (current_cursor_ == CursorType::Resize && resize_cursor_) {
+            SDL_SetCursor(resize_cursor_);
+        }
+    }
+
     void InputController::refreshMovementKeyCache() {
         for (size_t i = 0; i < input::kToolModeCount; ++i) {
             const auto mode = static_cast<input::ToolMode>(i);
@@ -481,9 +487,17 @@ namespace lfs::vis {
         return mods;
     }
 
-    bool InputController::isNearSplitter(double x) const {
+    bool InputController::isNearSplitter(double x, double y) const {
         auto* const rendering = services().renderingOrNull();
         if (!rendering) {
+            return false;
+        }
+
+        const glm::ivec2 viewport_size{
+            std::max(static_cast<int>(std::lround(viewport_bounds_.width)), 0),
+            std::max(static_cast<int>(std::lround(viewport_bounds_.height)), 0)};
+        const auto content_bounds = rendering->getContentBounds(viewport_size);
+        if (content_bounds.width <= 0.0f || content_bounds.height <= 0.0f) {
             return false;
         }
 
@@ -495,7 +509,13 @@ namespace lfs::vis {
         }
 
         constexpr float SPLITTER_HIT_HALF_WIDTH = 12.0f;
-        return std::abs(x - *split_x) < SPLITTER_HIT_HALF_WIDTH;
+        const float content_left = viewport_bounds_.x + content_bounds.x;
+        const float content_top = viewport_bounds_.y + content_bounds.y;
+        return x >= content_left &&
+               x < content_left + content_bounds.width &&
+               y >= content_top &&
+               y < content_top + content_bounds.height &&
+               std::abs(x - *split_x) < SPLITTER_HIT_HALF_WIDTH;
     }
 
     // Core handlers
@@ -563,7 +583,24 @@ namespace lfs::vis {
             return;
         }
 
-        // Check for splitter drag FIRST
+        if (is_left_button &&
+            action == input::ACTION_PRESS &&
+            isInViewport(x, y) &&
+            isNearSplitter(x, y)) {
+            if (isIndependentSplitViewActive()) {
+                focusSplitPanel(splitPanelForScreenX(x));
+            }
+            if (auto* const rendering = services().renderingOrNull()) {
+                drag_mode_ = DragMode::Splitter;
+                splitter_start_pos_ = rendering->getSplitPosition();
+                splitter_start_x_ = x;
+                SDL_SetCursor(resize_cursor_);
+                current_cursor_ = CursorType::Resize;
+                LOG_TRACE("Started splitter drag");
+                return;
+            }
+        }
+
         if (!over_gui &&
             is_left_button &&
             action == input::ACTION_PRESS) {
@@ -607,20 +644,12 @@ namespace lfs::vis {
                 last_clicked_camera_id_ = -1;
             }
 
-            // Check for splitter drag
-            if (isNearSplitter(x) && services().renderingOrNull()) {
-                drag_mode_ = DragMode::Splitter;
-                splitter_start_pos_ = services().renderingOrNull()->getSplitPosition();
-                splitter_start_x_ = x;
-                SDL_SetCursor(resize_cursor_);
-                LOG_TRACE("Started splitter drag");
-                return;
-            }
         }
 
         if (action == input::ACTION_RELEASE && drag_mode_ == DragMode::Splitter) {
             drag_mode_ = DragMode::None;
             SDL_SetCursor(SDL_GetDefaultCursor());
+            current_cursor_ = CursorType::Default;
             LOG_TRACE("Ended splitter drag");
             return;
         }
@@ -1126,6 +1155,10 @@ namespace lfs::vis {
 
         const bool over_viewport_gizmo = gui && gui->gizmo().isPositionInViewportGizmo(x, y);
         const bool over_transform_gizmo = isTransformGizmoOverOrUsing();
+        const bool over_splitter =
+            drag_mode_ == DragMode::None &&
+            isInViewport(x, y) &&
+            isNearSplitter(x, y);
 
         if (pending_click_drag_.active) {
             if (!isMouseButtonPressed(pending_click_drag_.button)) {
@@ -1172,6 +1205,7 @@ namespace lfs::vis {
             isInViewport(x, y) &&
             drag_mode_ == DragMode::None &&
             !over_gui &&
+            !over_splitter &&
             !over_viewport_gizmo &&
             !over_transform_gizmo) {
 
@@ -1231,20 +1265,10 @@ namespace lfs::vis {
             }
         }
 
-        // Determine if we should show resize cursor for splitter
-        bool should_show_resize = false;
-        if (const auto* const rendering = services().renderingOrNull();
-            rendering && rendering->isSplitViewActive()) {
-            should_show_resize = (drag_mode_ == DragMode::None &&
-                                  isInViewport(x, y) &&
-                                  isNearSplitter(x) &&
-                                  !over_gui);
-        }
-
-        if (should_show_resize && current_cursor_ != CursorType::Resize) {
+        if (over_splitter) {
             SDL_SetCursor(resize_cursor_);
             current_cursor_ = CursorType::Resize;
-        } else if (!should_show_resize && current_cursor_ == CursorType::Resize) {
+        } else if (current_cursor_ == CursorType::Resize) {
             SDL_SetCursor(SDL_GetDefaultCursor());
             current_cursor_ = CursorType::Default;
         }
@@ -1883,6 +1907,7 @@ namespace lfs::vis {
             press_selected_camera_frustum_ = false;
             pressed_camera_frustum_id_ = -1;
             SDL_SetCursor(SDL_GetDefaultCursor());
+            current_cursor_ = CursorType::Default;
         }
 
         if (drag_mode_ == DragMode::Brush && drag_button_released) {

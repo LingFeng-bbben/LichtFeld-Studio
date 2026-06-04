@@ -13,6 +13,7 @@
 #include "training/training_manager.hpp"
 #include "vksplat_viewport_renderer.hpp"
 #include <algorithm>
+#include <cmath>
 #include <format>
 #include <shared_mutex>
 #include <utility>
@@ -72,7 +73,14 @@ namespace lfs::vis {
     } // namespace
 
     RenderingManager::ContentBounds RenderingManager::getContentBounds(const glm::ivec2& viewport_size) const {
-        ContentBounds bounds{0.0f, 0.0f, static_cast<float>(viewport_size.x), static_cast<float>(viewport_size.y), false};
+        const int viewport_width = std::max(viewport_size.x, 0);
+        const int viewport_height = std::max(viewport_size.y, 0);
+        ContentBounds bounds{
+            0.0f,
+            0.0f,
+            static_cast<float>(viewport_width),
+            static_cast<float>(viewport_height),
+            false};
 
         if (split_view_service_.isGTComparisonActive(settings_)) {
             glm::ivec2 content_dims{0, 0};
@@ -81,22 +89,31 @@ namespace lfs::vis {
             } else {
                 content_dims = vulkan_gt_comparison_content_size_;
             }
-            if (content_dims.x <= 0 || content_dims.y <= 0) {
+            if (content_dims.x <= 0 || content_dims.y <= 0 ||
+                viewport_width <= 0 || viewport_height <= 0) {
                 return bounds;
             }
 
             const float content_aspect = static_cast<float>(content_dims.x) / content_dims.y;
-            const float viewport_aspect = static_cast<float>(viewport_size.x) / viewport_size.y;
+            const float viewport_aspect = static_cast<float>(viewport_width) / viewport_height;
 
             if (content_aspect > viewport_aspect) {
-                bounds.width = static_cast<float>(viewport_size.x);
-                bounds.height = viewport_size.x / content_aspect;
+                const int content_height =
+                    std::clamp(static_cast<int>(std::lround(static_cast<float>(viewport_width) / content_aspect)),
+                               1,
+                               viewport_height);
+                bounds.width = static_cast<float>(viewport_width);
+                bounds.height = static_cast<float>(content_height);
                 bounds.x = 0.0f;
-                bounds.y = (viewport_size.y - bounds.height) / 2.0f;
+                bounds.y = static_cast<float>(std::max((viewport_height - content_height) / 2, 0));
             } else {
-                bounds.height = static_cast<float>(viewport_size.y);
-                bounds.width = viewport_size.y * content_aspect;
-                bounds.x = (viewport_size.x - bounds.width) / 2.0f;
+                const int content_width =
+                    std::clamp(static_cast<int>(std::lround(static_cast<float>(viewport_height) * content_aspect)),
+                               1,
+                               viewport_width);
+                bounds.height = static_cast<float>(viewport_height);
+                bounds.width = static_cast<float>(content_width);
+                bounds.x = static_cast<float>(std::max((viewport_width - content_width) / 2, 0));
                 bounds.y = 0.0f;
             }
             bounds.letterboxed = true;

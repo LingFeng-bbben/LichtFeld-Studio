@@ -30,7 +30,8 @@ namespace lfs::vis::gui {
             return element && element->GetTagName() != "body" &&
                    element->GetTagName() != "#root" &&
                    element->GetId() != "overlay-body" &&
-                   element->GetId() != "dm-root";
+                   element->GetId() != "dm-root" &&
+                   !element->IsClassSet("viewport-split-divider");
         }
 
         [[nodiscard]] bool isViewportOverlayHoverRoot(const Rml::Element* const element) {
@@ -90,6 +91,7 @@ namespace lfs::vis::gui {
         append(RenderReason::DocumentHook, "document_hook");
         append(RenderReason::ViewportResize, "viewport_resize");
         append(RenderReason::ToolbarLayout, "toolbar_layout");
+        append(RenderReason::SplitDivider, "split_divider");
         append(RenderReason::GTMetrics, "gt_metrics");
         append(RenderReason::VramHud, "vram_hud");
         append(RenderReason::DataModelBinding, "data_model_binding");
@@ -202,6 +204,7 @@ namespace lfs::vis::gui {
             cacheBodyTemplate();
             document_->Show();
             applyGTMetricsOverlay();
+            applySplitDividerOverlay();
             if (vram_hud_)
                 vram_hud_->onDocumentLoaded(document_);
             updateToolbarRoots();
@@ -314,6 +317,22 @@ namespace lfs::vis::gui {
         markRenderNeeded(RenderReason::ToolbarLayout);
         toolbar_roots_dirty_ = true;
         updateToolbarRoots();
+    }
+
+    void RmlViewportOverlay::setSplitDividerOverlay(SplitDividerOverlayState state) {
+        const bool changed =
+            split_divider_overlay_.visible != state.visible ||
+            std::abs(split_divider_overlay_.x - state.x) > 0.5f ||
+            std::abs(split_divider_overlay_.y - state.y) > 0.5f ||
+            std::abs(split_divider_overlay_.width - state.width) > 0.5f ||
+            std::abs(split_divider_overlay_.height - state.height) > 0.5f;
+        if (!changed) {
+            return;
+        }
+
+        split_divider_overlay_ = state;
+        applySplitDividerOverlay();
+        markRenderNeeded(RenderReason::SplitDivider);
     }
 
     void RmlViewportOverlay::setGTMetricsOverlay(GTMetricsOverlayState state) {
@@ -452,6 +471,21 @@ namespace lfs::vis::gui {
         applied_secondary_toolbar_width_ = secondary_toolbar_width_;
         toolbar_roots_dirty_ = false;
         return true;
+    }
+
+    void RmlViewportOverlay::applySplitDividerOverlay() {
+        if (!document_) {
+            return;
+        }
+
+        if (auto* const overlay = document_->GetElementById("split-divider-overlay")) {
+            overlay->SetClass("hidden", !split_divider_overlay_.visible);
+            overlay->SetProperty("left", std::format("{:.1f}px", split_divider_overlay_.x));
+            overlay->SetProperty("top", std::format("{:.1f}px", split_divider_overlay_.y));
+            overlay->SetProperty("width", std::format("{:.1f}px", std::max(split_divider_overlay_.width, 0.0f)));
+            overlay->SetProperty("height", std::format("{:.1f}px", std::max(split_divider_overlay_.height, 0.0f)));
+            markRenderNeeded(RenderReason::SplitDivider);
+        }
     }
 
     void RmlViewportOverlay::applyGTMetricsOverlay() {
@@ -724,6 +758,7 @@ namespace lfs::vis::gui {
             wrapper->AppendChild(body->RemoveChild(child));
 
         applyGTMetricsOverlay();
+        applySplitDividerOverlay();
         if (vram_hud_)
             vram_hud_->onDocumentLoaded(document_);
     }

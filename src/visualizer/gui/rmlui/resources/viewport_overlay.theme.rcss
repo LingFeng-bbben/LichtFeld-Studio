@@ -9,6 +9,10 @@
     background-color: @{menu.background};
 }
 
+.viewport-split-divider {
+    background-color: @{menu.background};
+}
+
 .toolbar-vertical {
     background-color: transparent;
     border-radius: 0;

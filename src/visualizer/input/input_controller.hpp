@@ -78,6 +78,7 @@ namespace lfs::vis {
         void setFocusedSplitPanel(const SplitViewPanelId panel) {
             focusSplitPanel(panel);
         }
+        void applySplitterCursorOverride() const;
 
         void toggleIndependentSplitView() {
             lfs::core::events::cmd::ToggleIndependentSplitView{.viewport = &viewport_}.emit();
@@ -156,7 +157,7 @@ namespace lfs::vis {
         void updateCameraSpeed(bool increase);
         void updateZoomSpeed(bool increase);
         void publishCameraMove(Viewport* target_viewport = nullptr);
-        bool isNearSplitter(double x) const;
+        bool isNearSplitter(double x, double y) const;
         int getModifierKeys() const;
         bool isKeyPressed(int app_key) const;
         bool isMouseButtonPressed(int app_button) const;

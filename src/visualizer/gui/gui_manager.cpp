@@ -4778,6 +4778,8 @@ namespace lfs::vis::gui {
         {
             LOG_TIMER_THRESHOLD("gui_render.imgui_newFrame", 0.25);
             ImGui_ImplSDL3_NewFrame();
+            if (auto* input_controller = viewer_->getInputController())
+                input_controller->applySplitterCursorOverride();
             rmlui_manager_.clearVulkanQueue();
         }
         const auto& sdl_input = viewer_->getWindowManager()->frameInput();
@@ -5449,6 +5451,27 @@ namespace lfs::vis::gui {
         rml_viewport_overlay_.setViewportBounds(
             viewport_layout_.pos, viewport_layout_.size,
             {panel_input.screen_x, panel_input.screen_y});
+        RmlViewportOverlay::SplitDividerOverlayState split_divider_state;
+        if (auto* const rendering = viewer_ ? viewer_->getRenderingManager() : nullptr;
+            rendering && rendering->isSplitViewActive()) {
+            const auto divider_x = rendering->getSplitDividerScreenX(viewport_layout_.pos, viewport_layout_.size);
+            const auto content_bounds = rendering->getContentBounds(glm::ivec2(
+                std::max(static_cast<int>(viewport_layout_.size.x), 0),
+                std::max(static_cast<int>(viewport_layout_.size.y), 0)));
+            if (divider_x && content_bounds.width > 0.0f && content_bounds.height > 0.0f) {
+                const auto& t = theme();
+                constexpr float kSplitDividerMinWidthPx = 10.0f;
+                const float divider_width =
+                    std::max(kSplitDividerMinWidthPx * current_ui_scale_,
+                             std::round(t.viewport.border_size * current_ui_scale_ * 4.0f));
+                split_divider_state.visible = true;
+                split_divider_state.x = std::round((*divider_x - viewport_layout_.pos.x) - divider_width * 0.5f);
+                split_divider_state.y = content_bounds.y;
+                split_divider_state.width = divider_width;
+                split_divider_state.height = content_bounds.height;
+            }
+        }
+        rml_viewport_overlay_.setSplitDividerOverlay(split_divider_state);
         AppStore::GTMetricsOverlayConfig gt_metrics_config;
         if (auto* const rendering = viewer_ ? viewer_->getRenderingManager() : nullptr) {
             const auto settings = rendering->getSettings();
@@ -5631,6 +5654,8 @@ namespace lfs::vis::gui {
         apply_cursor(panel_layout_.getCursorRequest());
         if (SDL_Cursor* const cursor = systemCursorForImGuiCursor(ImGui::GetMouseCursor()))
             SDL_SetCursor(cursor);
+        if (auto* input_controller = viewer_->getInputController())
+            input_controller->applySplitterCursorOverride();
         syncWindowTextInput(viewer_->getWindow());
 
         if (vulkan_gui_) {
@@ -6162,40 +6187,6 @@ namespace lfs::vis::gui {
                 }
             }
         }
-
-        auto* const rendering = viewer_ ? viewer_->getRenderingManager() : nullptr;
-        if (!rendering || viewport_layout_.size.x <= 0.0f || viewport_layout_.size.y <= 0.0f) {
-            return;
-        }
-
-        if (!rendering->isSplitViewActive()) {
-            return;
-        }
-
-        const auto& t = theme();
-        auto* const draw_list = ImGui::GetBackgroundDrawList(ImGui::GetMainViewport());
-        const auto divider_x = rendering->getSplitDividerScreenX(viewport_layout_.pos, viewport_layout_.size);
-        if (!divider_x) {
-            return;
-        }
-        constexpr float kSplitDividerMinWidthPx = 10.0f;
-        const float divider_width =
-            std::max(kSplitDividerMinWidthPx * current_ui_scale_,
-                     std::round(t.viewport.border_size * current_ui_scale_ * 4.0f));
-        const float divider_left = std::round(*divider_x - divider_width * 0.5f);
-        const float divider_right = std::round(*divider_x + divider_width * 0.5f);
-        const ImU32 divider_fill_color = toU32(t.menu_background());
-
-        draw_list->PushClipRect(
-            ImVec2(viewport_layout_.pos.x, viewport_layout_.pos.y),
-            ImVec2(viewport_layout_.pos.x + viewport_layout_.size.x,
-                   viewport_layout_.pos.y + viewport_layout_.size.y),
-            true);
-        draw_list->AddRectFilled(
-            ImVec2(divider_left, viewport_layout_.pos.y),
-            ImVec2(divider_right, viewport_layout_.pos.y + viewport_layout_.size.y),
-            divider_fill_color);
-        draw_list->PopClipRect();
     }
 
     void GuiManager::updateInputOverrides(const PanelInputState& input,

@@ -14,6 +14,12 @@ body {
     height: 100%;
 }
 
+.viewport-split-divider {
+    position: absolute;
+    pointer-events: none;
+    z-index: 1;
+}
+
 .panel-toolbar-root {
     position: absolute;
     top: 0;
