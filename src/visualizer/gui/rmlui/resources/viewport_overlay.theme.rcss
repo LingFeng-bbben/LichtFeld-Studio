@@ -14,17 +14,9 @@
     border-radius: 0;
 }
 
-.toolbar-flyout {
-    background-color: @{toolbar.background};
-    border-color: @{overlay.border};
-}
-
-.flyout-corner-marker {
-    border-bottom-color: @{viewport.icon_dim};
-}
-
-.icon-btn.selected .flyout-corner-marker {
-    border-bottom-color: @{background};
+.subtoolbar-container {
+    background-color: @{toolbar.sub_background};
+    border-radius: @{num(size.window_rounding)}dp;
 }
 
 .toolbar-separator {
@@ -42,8 +34,7 @@
 }
 
 .viewport-transform-meta__target,
-.viewport-transform-group-label,
-.viewport-transform-toggle-label {
+.viewport-transform-group-label {
     color: @{text_dim};
 }
 
