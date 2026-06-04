@@ -114,16 +114,6 @@ BUILTIN_TOOLS: tuple[ToolDef, ...] = (
         poll=_poll_has_gaussians,
     ),
     ToolDef(
-        id="builtin.brush",
-        label="Brush",
-        icon="painting",
-        group="paint",
-        order=60,
-        description="Paint saturation",
-        shortcut="6",
-        poll=_poll_has_gaussians,
-    ),
-    ToolDef(
         id="builtin.cropbox",
         label="Crop",
         icon="cropbox",
@@ -140,7 +130,7 @@ BUILTIN_TOOLS: tuple[ToolDef, ...] = (
         group="utility",
         order=80,
         description="Align to world axes",
-        shortcut="7",
+        shortcut="6",
         poll=_poll_has_scene,
     ),
 )

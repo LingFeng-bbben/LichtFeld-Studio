@@ -101,8 +101,8 @@ namespace lfs::vis {
         Viewport viewport(200, 200);
         InputController controller(nullptr, viewport);
 
-        controller.getBindings().startCapture(input::ToolMode::BRUSH,
-                                              input::Action::CYCLE_BRUSH_MODE);
+        controller.getBindings().startCapture(input::ToolMode::GLOBAL,
+                                              input::Action::TOOL_ALIGN);
         lfs::python::request_keyboard_capture("input-controller-focus-test");
         controller.handleKey(input::KEY_B, input::ACTION_PRESS, input::KEYMOD_NONE);
         lfs::python::release_keyboard_capture("input-controller-focus-test");
@@ -296,7 +296,7 @@ namespace lfs::vis {
                       input::ToolMode::SELECTION, input::MouseButton::RIGHT, input::KEYMOD_NONE),
                   input::Action::CAMERA_ORBIT);
         EXPECT_EQ(bindings.getActionForDrag(
-                      input::ToolMode::BRUSH, input::MouseButton::RIGHT, input::KEYMOD_NONE),
+                      input::ToolMode::ALIGN, input::MouseButton::RIGHT, input::KEYMOD_NONE),
                   input::Action::CAMERA_PAN);
     }
 

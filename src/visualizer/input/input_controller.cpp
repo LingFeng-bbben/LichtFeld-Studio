@@ -26,7 +26,6 @@
 #include "rendering/rendering_manager.hpp"
 #include "scene/scene_manager.hpp"
 #include "tools/align_tool.hpp"
-#include "tools/brush_tool.hpp"
 #include "tools/selection_tool.hpp"
 #include "tools/tool_base.hpp"
 #include "tools/unified_tool_registry.hpp"
@@ -264,9 +263,6 @@ namespace lfs::vis {
                 break;
             case input::Action::TOOL_MIRROR:
                 tool = ToolType::Mirror;
-                break;
-            case input::Action::TOOL_BRUSH:
-                tool = ToolType::Brush;
                 break;
             case input::Action::TOOL_ALIGN:
                 tool = ToolType::Align;
@@ -882,25 +878,6 @@ namespace lfs::vis {
                         if (result.status == op::OperatorResult::RUNNING_MODAL) {
                             // Operator is now modal, don't set drag mode - modal dispatch handles it
                         }
-                    } else if (brush_tool_ && brush_tool_->isEnabled()) {
-                        // Only invoke brush operator for add/remove actions (not replace)
-                        if (bound_action == input::Action::SELECTION_ADD ||
-                            bound_action == input::Action::SELECTION_REMOVE) {
-                            const int brush_mode = static_cast<int>(brush_tool_->getMode());
-                            const int brush_action = (bound_action == input::Action::SELECTION_REMOVE) ? 1 : 0;
-
-                            op::OperatorProperties props;
-                            props.set("x", x);
-                            props.set("y", y);
-                            props.set("button", button);
-                            props.set("modifiers", mods);
-                            props.set("mode", brush_mode);
-                            props.set("action", brush_action);
-                            props.set("brush_radius", brush_tool_->getBrushRadius());
-                            props.set("saturation_amount", brush_tool_->getSaturationAmount());
-
-                            op::operators().invoke(op::BuiltinOp::BrushStroke, &props);
-                        }
                     } else if (align_tool_ && align_tool_->isEnabled()) {
                         op::OperatorProperties props;
                         props.set("x", x);
@@ -983,10 +960,6 @@ namespace lfs::vis {
                 drag_mode_ = DragMode::None;
                 drag_button_ = -1;
                 was_dragging = true;
-            } else if (drag_mode_ == DragMode::Brush) {
-                // Selection and brush tools now use operator system (modal dispatch handles release)
-                drag_mode_ = DragMode::None;
-                drag_button_ = -1;
             }
             drag_viewport_ = nullptr;
 
@@ -1366,7 +1339,7 @@ namespace lfs::vis {
             }
         }
 
-        // Brush radius adjustment for selection/brush tools. Modal operators
+        // Brush radius adjustment for the selection tool. Modal operators
         // for selection strokes pass scroll through, so it's safe to honor
         // BRUSH_RESIZE here even mid-stroke — that's what lets the user grow
         // or shrink the ring while in the middle of an add or subtract drag.
@@ -1374,11 +1347,6 @@ namespace lfs::vis {
             if (selection_tool_ && selection_tool_->isEnabled()) {
                 const float scale = (yoff > 0) ? 1.1f : 0.9f;
                 selection_tool_->setBrushRadius(selection_tool_->getBrushRadius() * scale);
-                return;
-            }
-            if (brush_tool_ && brush_tool_->isEnabled()) {
-                const float scale = (yoff > 0) ? 1.1f : 0.9f;
-                brush_tool_->setBrushRadius(brush_tool_->getBrushRadius() * scale);
                 return;
             }
         }
@@ -1741,15 +1709,6 @@ namespace lfs::vis {
                 return;
             }
 
-            case input::Action::CYCLE_BRUSH_MODE:
-                if (brush_tool_ && brush_tool_->isEnabled()) {
-                    const auto current = brush_tool_->getMode();
-                    brush_tool_->setMode(current == tools::BrushMode::Select
-                                             ? tools::BrushMode::Saturation
-                                             : tools::BrushMode::Select);
-                }
-                return;
-
             case input::Action::CAMERA_SPEED_UP:
                 updateCameraSpeed(true);
                 return;
@@ -1907,13 +1866,6 @@ namespace lfs::vis {
             pressed_camera_frustum_id_ = -1;
             SDL_SetCursor(SDL_GetDefaultCursor());
             current_cursor_ = CursorType::Default;
-        }
-
-        if (drag_mode_ == DragMode::Brush && drag_button_released) {
-            drag_mode_ = DragMode::None;
-            drag_button_ = -1;
-            press_selected_camera_frustum_ = false;
-            pressed_camera_frustum_id_ = -1;
         }
 
         // Sync movement key states with actual keyboard (using cached keys)
@@ -2839,8 +2791,6 @@ namespace lfs::vis {
             return input::ToolMode::CROP_BOX;
         if (selection_tool_ && selection_tool_->isEnabled())
             return input::ToolMode::SELECTION;
-        if (brush_tool_ && brush_tool_->isEnabled())
-            return input::ToolMode::BRUSH;
         if (align_tool_ && align_tool_->isEnabled())
             return input::ToolMode::ALIGN;
         // Check GUI tool mode for transform tools

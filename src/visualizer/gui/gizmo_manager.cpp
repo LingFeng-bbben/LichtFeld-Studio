@@ -25,7 +25,6 @@
 #include "rendering/rendering_manager.hpp"
 #include "scene/scene_manager.hpp"
 #include "tools/align_tool.hpp"
-#include "tools/brush_tool.hpp"
 #include "tools/selection_tool.hpp"
 #include "tools/unified_tool_registry.hpp"
 #include "visualizer/app_store.hpp"
@@ -488,8 +487,6 @@ namespace lfs::vis::gui {
 
         ui::NodeSelected::when([this](const auto&) {
             python::cancel_active_operator();
-            if (auto* const t = viewer_->getBrushTool())
-                t->setEnabled(false);
             if (auto* const t = viewer_->getAlignTool())
                 t->setEnabled(false);
             if (auto* const sm = viewer_->getSceneManager())
@@ -499,8 +496,6 @@ namespace lfs::vis::gui {
 
         ui::NodeDeselected::when([this](const auto&) {
             python::cancel_active_operator();
-            if (auto* const t = viewer_->getBrushTool())
-                t->setEnabled(false);
             if (auto* const t = viewer_->getAlignTool())
                 t->setEnabled(false);
             node_bounds_cache_valid_ = false;
@@ -528,7 +523,6 @@ namespace lfs::vis::gui {
             case ToolType::Rotate: tool_id = "builtin.rotate"; break;
             case ToolType::Scale: tool_id = "builtin.scale"; break;
             case ToolType::Mirror: tool_id = "builtin.mirror"; break;
-            case ToolType::Brush: tool_id = "builtin.brush"; break;
             case ToolType::Align: tool_id = "builtin.align"; break;
             }
             if (tool_id)
@@ -688,7 +682,6 @@ namespace lfs::vis::gui {
 
     void GizmoManager::updateToolState(const UIContext& ctx, bool ui_hidden) {
         auto* const scene_manager = ctx.viewer->getSceneManager();
-        auto* const brush_tool = ctx.viewer->getBrushTool();
         auto* const align_tool = ctx.viewer->getAlignTool();
         auto* const selection_tool = ctx.viewer->getSelectionTool();
         auto* const rendering_manager = ctx.viewer->getRenderingManager();
@@ -702,7 +695,6 @@ namespace lfs::vis::gui {
         stamp.ui_hidden = ui_hidden;
         stamp.has_scene_manager = scene_manager != nullptr;
         stamp.has_selected_node = has_selected_node;
-        stamp.brush_tool = brush_tool;
         stamp.align_tool = align_tool;
         stamp.selection_tool = selection_tool;
         stamp.rendering_manager = rendering_manager;
@@ -744,12 +736,9 @@ namespace lfs::vis::gui {
                 clearCropToolOverlayState();
             }
 
-            const bool is_brush_mode = (active_tool_id == "builtin.brush");
             const bool is_align_mode = (active_tool_id == "builtin.align");
             const bool is_selection_mode = (active_tool_id == "builtin.select");
 
-            if (brush_tool)
-                brush_tool->setEnabled(is_brush_mode);
             if (align_tool)
                 align_tool->setEnabled(is_align_mode);
             if (selection_tool)
@@ -772,8 +761,6 @@ namespace lfs::vis::gui {
             crop_tool_initialized_ = false;
             crop_tool_target_node_id_ = core::NULL_NODE;
             clearCropToolOverlayState();
-            if (auto* const tool = ctx.viewer->getBrushTool())
-                tool->setEnabled(false);
             if (auto* const tool = ctx.viewer->getAlignTool())
                 tool->setEnabled(false);
             if (auto* const tool = ctx.viewer->getSelectionTool())
@@ -2356,8 +2343,6 @@ namespace lfs::vis::gui {
 
     void GizmoManager::deactivateAllTools() {
         python::cancel_active_operator();
-        if (auto* const t = viewer_->getBrushTool())
-            t->setEnabled(false);
         if (auto* const t = viewer_->getAlignTool())
             t->setEnabled(false);
 

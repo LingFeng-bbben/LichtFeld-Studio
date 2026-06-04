@@ -2003,7 +2003,7 @@ def open_url(url: str) -> None:
 
 def set_tool(tool: str) -> None:
     """
-    Switch to a toolbar tool (none, selection, translate, rotate, scale, mirror, brush, align, cropbox)
+    Switch to a toolbar tool (none, selection, translate, rotate, scale, mirror, align, cropbox)
     """
 
 class Key(enum.Enum):

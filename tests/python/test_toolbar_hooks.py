@@ -340,18 +340,18 @@ def test_transform_and_mirror_tools_use_centered_subtool_rows(toolbar_module, mo
     rotate_tool = _tool("builtin.rotate", "Rotate", "rotation", "3")
     scale_tool = _tool("builtin.scale", "Scale", "scaling", "4")
     mirror_tool = _tool("builtin.mirror", "Mirror", "mirror", "5", submodes=mirror_submodes)
-    brush_tool = SimpleNamespace(
-        id="builtin.brush",
-        icon="painting",
-        label="Brush",
+    align_tool = SimpleNamespace(
+        id="builtin.align",
+        icon="align",
+        label="Align",
         shortcut="6",
-        group="paint",
+        group="utility",
         submodes=(),
         pivot_modes=(),
         selected=None,
         can_activate=lambda _context: True,
     )
-    tools = [translate_tool, rotate_tool, scale_tool, mirror_tool, brush_tool]
+    tools = [translate_tool, rotate_tool, scale_tool, mirror_tool, align_tool]
     by_id = {tool.id: tool for tool in tools}
 
     monkeypatch.setattr(lf_stub.ui, "get_active_tool", lambda: state.active_tool, raising=False)
@@ -393,7 +393,7 @@ def test_transform_and_mirror_tools_use_centered_subtool_rows(toolbar_module, mo
         "builtin.scale",
     ]
     assert snapshot["mirror_group_buttons"][0]["value"] == "builtin.mirror"
-    assert [button["value"] for button in snapshot["gizmo_buttons"]] == ["builtin.brush"]
+    assert [button["value"] for button in snapshot["gizmo_buttons"]] == ["builtin.align"]
 
     controller.dispatch("tool", "builtin.translate")
     snapshot = controller.snapshot()
@@ -666,7 +666,6 @@ def test_viewport_overlay_template_moves_tools_left_and_transform_numbers_center
             "rotate",
             "scale",
             "mirror",
-            "painting",
             "align_3point",
             "crop_box",
             "ellipsoid",

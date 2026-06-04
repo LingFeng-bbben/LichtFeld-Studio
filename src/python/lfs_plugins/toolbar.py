@@ -140,7 +140,6 @@ class _GizmoToolbarController:
         "builtin.rotate": "toolbar.rotate",
         "builtin.scale": "toolbar.scale",
         "builtin.mirror": "toolbar.mirror",
-        "builtin.brush": "toolbar.painting",
         "builtin.cropbox": "toolbar.crop_box",
         "builtin.align": "toolbar.align_3point",
     }
@@ -151,7 +150,6 @@ class _GizmoToolbarController:
         "builtin.rotate": "TOOL_ROTATE",
         "builtin.scale": "TOOL_SCALE",
         "builtin.mirror": "TOOL_MIRROR",
-        "builtin.brush": "TOOL_BRUSH",
         "builtin.align": "TOOL_ALIGN",
     }
 

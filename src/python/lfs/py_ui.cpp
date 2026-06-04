@@ -4063,7 +4063,6 @@ namespace lfs::python {
                     {"rotate", ToolType::Rotate},
                     {"scale", ToolType::Scale},
                     {"mirror", ToolType::Mirror},
-                    {"brush", ToolType::Brush},
                     {"align", ToolType::Align},
                 };
 
@@ -4078,7 +4077,7 @@ namespace lfs::python {
 
                 lfs::core::events::tools::SetToolbarTool{.tool_mode = static_cast<int>(it->second)}.emit();
             },
-            nb::arg("tool"), "Switch to a toolbar tool (none, selection, translate, rotate, scale, mirror, brush, align, cropbox)");
+            nb::arg("tool"), "Switch to a toolbar tool (none, selection, translate, rotate, scale, mirror, align, cropbox)");
 
         // Key enum (subset of commonly used keys)
         nb::enum_<ImGuiKey>(m, "Key")
@@ -4277,7 +4276,6 @@ namespace lfs::python {
                 case vis::ToolType::Rotate: return "builtin.rotate";
                 case vis::ToolType::Scale: return "builtin.scale";
                 case vis::ToolType::Mirror: return "builtin.mirror";
-                case vis::ToolType::Brush: return "builtin.brush";
                 case vis::ToolType::Align: return "builtin.align";
                 default: return "";
                 }
@@ -4292,7 +4290,6 @@ namespace lfs::python {
                     {"builtin.rotate", vis::ToolType::Rotate},
                     {"builtin.scale", vis::ToolType::Scale},
                     {"builtin.mirror", vis::ToolType::Mirror},
-                    {"builtin.brush", vis::ToolType::Brush},
                     {"builtin.align", vis::ToolType::Align},
                 };
                 auto it = tool_map.find(id);
