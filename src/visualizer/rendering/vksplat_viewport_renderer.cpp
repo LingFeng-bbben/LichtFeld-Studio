@@ -223,6 +223,8 @@ namespace lfs::vis {
                 {"rasterize_forward_plain", (root / "generated/rasterize_forward_plain.spv").string()},
                 {"rasterize_forward_3dgut_plain",
                  (root / "generated/rasterize_forward_3dgut_plain.spv").string()},
+                {"rasterize_forward_light_plain",
+                 (root / "generated/rasterize_forward_light_plain.spv").string()},
                 {"tile_batch_counts", (root / "generated/tile_batch_counts.spv").string()},
                 {"tile_batch_descriptors", (root / "generated/tile_batch_descriptors.spv").string()},
                 {"rasterize_forward_batches_plain",
@@ -296,6 +298,15 @@ namespace lfs::vis {
 
         [[nodiscard]] double gib(const std::size_t bytes) {
             return static_cast<double>(bytes) / (1024.0 * 1024.0 * 1024.0);
+        }
+
+        [[nodiscard]] std::size_t denseTileBatchCapacity(const std::size_t tile_instances,
+                                                         const std::size_t num_tiles) {
+            const std::size_t max_dense_tiles =
+                std::min(num_tiles, tile_instances / (RASTER_DENSE_TILE_THRESHOLD + 1u));
+            return std::max<std::size_t>(
+                1u,
+                _CEIL_DIV(tile_instances, static_cast<std::size_t>(RASTER_BATCH_SIZE)) + max_dense_tiles);
         }
 
         template <typename T>
@@ -1463,6 +1474,7 @@ namespace lfs::vis {
         const auto add_count = [&](const std::size_t count, const std::size_t elem_size) {
             add(count * elem_size);
         };
+        const std::size_t dense_batch_capacity = denseTileBatchCapacity(sort_capacity, num_tiles);
 
         add_count(num_splats, sizeof(std::uint32_t));                                                            // primitive_depth_keys
         add_count(num_splats, sizeof(std::int32_t));                                                             // tiles_touched
@@ -1487,6 +1499,12 @@ namespace lfs::vis {
         add_count(1, sizeof(std::uint32_t));                                                                     // tile_sort_count
         add_count(3, sizeof(std::uint32_t));                                                                     // tile_sort_dispatch_args
         add_count(num_tiles + 1, sizeof(std::int32_t));                                                          // tile_ranges
+        add_count(num_tiles, sizeof(std::int32_t));                                                              // tile_batch_counts
+        add_count(num_tiles, sizeof(std::int32_t));                                                              // tile_batch_offsets
+        add_count(3, sizeof(std::uint32_t));                                                                     // tile_batch_dispatch_args
+        add_count(4 * dense_batch_capacity, sizeof(std::uint32_t));                                              // tile_batch_descriptors
+        add_count(4 * dense_batch_capacity * TILE_WIDTH * TILE_HEIGHT, sizeof(float));                           // tile_batch_pixel_state
+        add_count(dense_batch_capacity * TILE_WIDTH * TILE_HEIGHT, sizeof(std::int32_t));                        // tile_batch_n_contributors
         add_count(4 * num_pixels, sizeof(float));                                                                // pixel_state
         add_count(num_pixels, sizeof(float));                                                                    // pixel_depth
         add_count(num_pixels, sizeof(std::int32_t));                                                             // n_contributors
@@ -1765,6 +1783,13 @@ namespace lfs::vis {
         bind_count(buffers_.tile_sort_count, 1);
         bind_count(buffers_.tile_sort_dispatch_args, 3);
         bind_count(buffers_.tile_ranges, num_tiles + 1);
+        const std::size_t dense_batch_capacity = denseTileBatchCapacity(sort_capacity, num_tiles);
+        bind_count(buffers_.tile_batch_counts, num_tiles);
+        bind_count(buffers_.tile_batch_offsets, num_tiles);
+        bind_count(buffers_.tile_batch_dispatch_args, 3);
+        bind_count(buffers_.tile_batch_descriptors, 4 * dense_batch_capacity);
+        bind_count(buffers_.tile_batch_pixel_state, 4 * dense_batch_capacity * TILE_WIDTH * TILE_HEIGHT);
+        bind_count(buffers_.tile_batch_n_contributors, dense_batch_capacity * TILE_WIDTH * TILE_HEIGHT);
         const std::size_t tiles_end = cursor;
         bind_count(buffers_.pixel_state, 4 * num_pixels);
         bind_count(buffers_.pixel_depth, num_pixels);
@@ -1831,6 +1856,12 @@ namespace lfs::vis {
         RELEASE_PRIVATE_SCRATCH(tile_sort_count);
         RELEASE_PRIVATE_SCRATCH(tile_sort_dispatch_args);
         RELEASE_PRIVATE_SCRATCH(tile_ranges);
+        RELEASE_PRIVATE_SCRATCH(tile_batch_counts);
+        RELEASE_PRIVATE_SCRATCH(tile_batch_offsets);
+        RELEASE_PRIVATE_SCRATCH(tile_batch_dispatch_args);
+        RELEASE_PRIVATE_SCRATCH(tile_batch_descriptors);
+        RELEASE_PRIVATE_SCRATCH(tile_batch_pixel_state);
+        RELEASE_PRIVATE_SCRATCH(tile_batch_n_contributors);
         RELEASE_PRIVATE_SCRATCH(pixel_state);
         RELEASE_PRIVATE_SCRATCH(pixel_depth);
         RELEASE_PRIVATE_SCRATCH(n_contributors);
@@ -1886,6 +1917,12 @@ namespace lfs::vis {
         DETACH_SHARED(tile_sort_count);
         DETACH_SHARED(tile_sort_dispatch_args);
         DETACH_SHARED(tile_ranges);
+        DETACH_SHARED(tile_batch_counts);
+        DETACH_SHARED(tile_batch_offsets);
+        DETACH_SHARED(tile_batch_dispatch_args);
+        DETACH_SHARED(tile_batch_descriptors);
+        DETACH_SHARED(tile_batch_pixel_state);
+        DETACH_SHARED(tile_batch_n_contributors);
         DETACH_SHARED(pixel_state);
         DETACH_SHARED(pixel_depth);
         DETACH_SHARED(n_contributors);

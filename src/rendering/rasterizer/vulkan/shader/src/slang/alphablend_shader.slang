@@ -24,6 +24,10 @@ import utils;
 #define LFS_RASTER_OVERLAYS 1
 #endif
 
+#ifndef LFS_SKIP_DENSE_TILES
+#define LFS_SKIP_DENSE_TILES 0
+#endif
+
 #define SHARED_STRUCT 1
 
 #if SUBTILE_SIZE > 0
@@ -411,6 +415,12 @@ void main(
     uint tile_idx = groupID.y * grid_width + groupID.x;
     uint32_t tile_idx_start = tile_ranges[tile_idx];
     uint32_t tile_idx_end = tile_ranges[tile_idx+1];
+    #if LFS_SKIP_DENSE_TILES
+    if (tile_idx_end > tile_idx_start &&
+        tile_idx_end - tile_idx_start > RASTER_DENSE_TILE_THRESHOLD) {
+        return;
+    }
+    #endif
 
     uint thread_rank = groupThreadID.y * TILE_WIDTH + groupThreadID.x;
 

@@ -25,7 +25,6 @@ import utils;
 #define TILE_BATCH_ENTRY_RASTERIZE 3
 #define TILE_BATCH_ENTRY_COMPOSE 4
 
-static const uint RASTER_BATCH_SIZE = 1024u;
 static const float FAR_DEPTH = 1.0e10f;
 
 [ForceInline]
@@ -55,7 +54,9 @@ void main(uint3 dispatchThreadID : SV_DispatchThreadID,
     int32_t range_end = tile_ranges[tile_idx + 1u];
     uint tile_count = uint(max(range_end - range_start, 0));
     out_tile_batch_counts[tile_idx] =
-        int32_t((tile_count + RASTER_BATCH_SIZE - 1u) / RASTER_BATCH_SIZE);
+        tile_count > RASTER_DENSE_TILE_THRESHOLD
+            ? int32_t((tile_count + RASTER_BATCH_SIZE - 1u) / RASTER_BATCH_SIZE)
+            : 0;
 }
 
 #elif TILE_BATCH_ENTRY == TILE_BATCH_ENTRY_DESCRIPTORS
@@ -265,6 +266,9 @@ void main(uint3 groupThreadID : SV_GroupThreadID,
         ? 0u
         : uint(max(tile_batch_offsets[tile_idx - 1u], 0));
     uint desc_end = uint(max(tile_batch_offsets[tile_idx], 0));
+    if (desc_end <= desc_begin)
+        return;
+
     float2 center_pix_coord = float2(pix_coord);
     float4 curr_pixel_state = float4(0.0f, 0.0f, 0.0f, 1.0f);
     float median_depth = FAR_DEPTH;

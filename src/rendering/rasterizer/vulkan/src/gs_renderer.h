@@ -171,7 +171,12 @@ protected:
     void executePrepareTileSort(const VulkanGSRendererUniforms& uniforms,
                                 VulkanGSPipelineBuffers& buffers);
     void executeBatchedRasterizeForward(const VulkanGSRendererUniforms& uniforms,
-                                        VulkanGSPipelineBuffers& buffers);
+                                        VulkanGSPipelineBuffers& buffers,
+                                        const _VulkanBuffer& selection_mask,
+                                        const _VulkanBuffer& preview_mask,
+                                        const _VulkanBuffer& selection_colors,
+                                        const _VulkanBuffer& overlay_flags,
+                                        const _VulkanBuffer& overlay_params);
 
     _ComputePipeline pipeline_projection_forward = _ComputePipeline(19);
     _ComputePipeline pipeline_projection_forward_3dgut = _ComputePipeline(19);
@@ -192,6 +197,7 @@ protected:
     _ComputePipelinePair pipeline_rasterize_forward_3dgut = _ComputePipelinePair(20);
     _ComputePipelinePair pipeline_rasterize_forward_plain = _ComputePipelinePair(14);
     _ComputePipelinePair pipeline_rasterize_forward_3dgut_plain = _ComputePipelinePair(20);
+    _ComputePipelinePair pipeline_rasterize_forward_light_plain = _ComputePipelinePair(14);
     _ComputePipeline pipeline_tile_batch_counts = _ComputePipeline(2);
     _ComputePipeline pipeline_tile_batch_descriptors = _ComputePipeline(4);
     _ComputePipelinePair pipeline_rasterize_forward_batches_plain = _ComputePipelinePair(7);
